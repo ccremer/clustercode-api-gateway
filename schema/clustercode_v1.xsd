@@ -1,0 +1,70 @@
+<xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="uuid">
+    <xs:restriction base="xs:string">
+      <xs:length value="36" fixed="true"/>
+      <xs:pattern value="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[8-9a-bA-B][0-9a-fA-F]{3}-[0-9a-fA-F]{12}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="stdstream">
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="0"/>
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="task_added_event">
+    <xs:complexType>
+      <xs:all>
+        <xs:element type="xs:string" name="job_id"/>
+        <xs:element type="xs:integer" name="priority"/>
+        <xs:element name="args" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="arg"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="slice_added_event">
+    <xs:complexType>
+      <xs:all>
+        <xs:element type="uuid" name="job_id"/>
+        <xs:element type="xs:integer" name="priority"/>
+        <xs:element name="args" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="arg"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="std_streams" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence minOccurs="0">
+              <xs:element name="stream">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element type="stdstream" name="fd" default="1"/>
+                    <xs:element type="xs:string" name="l"/>
+                  </xs:all>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="tasks">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="slice_added_event" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

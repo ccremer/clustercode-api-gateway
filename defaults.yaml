@@ -1,0 +1,27 @@
+---
+log:
+  level: info
+  timestamps: false
+  formatter: json
+  caller: false
+
+rabbitmq:
+  url: amqp://guest:guest@rabbitmq:5672/
+  channels:
+    task:
+      added: task-added
+      completed: task-completed
+      cancelled: task-cancelled
+    slice:
+      added: slice-added
+      completed: slice-completed
+
+api:
+  http:
+    addr: ":8080"
+  schema:
+    filepattern: schema/clustercode_v%d.xsd
+
+prometheus:
+  enabled: true
+  uri: /metrics
