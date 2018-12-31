@@ -2,10 +2,11 @@ package messaging
 
 import (
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"testing"
 )
 
-func TestDeserializeTaskAddedEvent(t *testing.T) {
+func TestDeserializeJsonTaskAddedEvent(t *testing.T) {
 	json := string(`
         {
             "file": "0/path/to/file.ext",
@@ -34,7 +35,36 @@ func TestDeserializeTaskAddedEvent(t *testing.T) {
 	assert.Equal(t, expected, result)
 }
 
-func TestDeserializeSliceAddedEvent(t *testing.T) {
+func TestDeserializeXmlTaskAddedEvent(t *testing.T) {
+	json := string(`
+        {
+            "file": "${base_dir}/0/path/to/file.ext",
+            "args": [
+                "arg1",
+                "arg with space"
+            ],
+            "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba",
+            "file_hash": "b8934ef001960cafc224be9f1e1ca82c",
+            "priority": 1,
+            "slice_size": 120
+        }
+        `)
+	expected := TaskAddedEvent{
+		Args:      []string{"arg1", "arg with space"},
+		File:      "${base_dir}/path/to/file.ext",
+		JobID:     "620b8251-52a1-4ecd-8adc-4fb280214bba",
+		Priority:  1,
+		SliceSize: 120,
+		FileHash:  "b8934ef001960cafc224be9f1e1ca82c",
+	}
+
+	result := TaskAddedEvent{}
+	fromJson(json, &result)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestDeserializeJsonSliceAddedEvent(t *testing.T) {
 	json := string(`
         {
             "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba",
@@ -53,6 +83,26 @@ func TestDeserializeSliceAddedEvent(t *testing.T) {
 
 	result := SliceAddedEvent{}
 	fromJson(json, &result)
+
+	assert.Equal(t, expected, result)
+}
+
+func TestDeserializeXmlSliceAddedEvent(t *testing.T) {
+	xml, err := ioutil.ReadFile("testdata/task_slice_added.xml.golden")
+	assert.NoError(t, err)
+
+	expected := SliceAddedEvent{
+		Args:    []string{"arg1", "arg with space"},
+		JobID:   "620b8251-52a1-4ecd-8adc-4fb280214bba",
+		SliceNr: 34,
+	}
+
+	LoadSchema("../schema/clustercode_v1.xsd")
+
+	result := SliceAddedEvent{}
+	xmlError := fromXml(string(xml), &result)
+	//result.XMLName = xml2.Name{}
+	assert.NoError(t, xmlError)
 
 	assert.Equal(t, expected, result)
 }
