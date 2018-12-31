@@ -1,12 +1,25 @@
 package messaging
 
 import (
+	"flag"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 )
 
-func TestDeserializeJsonTaskAddedEvent(t *testing.T) {
+var update = flag.Bool("update", false, "update golden files")
+
+type ApiTestSuite struct {
+	suite.Suite
+}
+
+func (s *ApiTestSuite) SetupTest() {
+	LoadSchema("../schema/clustercode_v1.xsd")
+}
+
+func (s *ApiTestSuite) TestDeserializeJsonTaskAddedEvent() {
 	json := string(`
         {
             "file": "0/path/to/file.ext",
@@ -32,10 +45,10 @@ func TestDeserializeJsonTaskAddedEvent(t *testing.T) {
 	result := TaskAddedEvent{}
 	fromJson(json, &result)
 
-	assert.Equal(t, expected, result)
+	assert.Equal(s.T(), expected, result)
 }
-
-func TestDeserializeXmlTaskAddedEvent(t *testing.T) {
+/*
+func (s *ApiTestSuite) TestDeserializeXmlTaskAddedEvent() {
 	json := string(`
         {
             "file": "${base_dir}/0/path/to/file.ext",
@@ -61,10 +74,10 @@ func TestDeserializeXmlTaskAddedEvent(t *testing.T) {
 	result := TaskAddedEvent{}
 	fromJson(json, &result)
 
-	assert.Equal(t, expected, result)
-}
+	assert.Equal(s.T(), expected, result)
+}*/
 
-func TestDeserializeJsonSliceAddedEvent(t *testing.T) {
+func (s *ApiTestSuite) TestDeserializeJsonSliceAddedEvent() {
 	json := string(`
         {
             "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba",
@@ -84,12 +97,13 @@ func TestDeserializeJsonSliceAddedEvent(t *testing.T) {
 	result := SliceAddedEvent{}
 	fromJson(json, &result)
 
-	assert.Equal(t, expected, result)
+	assert.Equal(s.T(), expected, result)
 }
 
-func TestDeserializeXmlSliceAddedEvent(t *testing.T) {
-	xml, err := ioutil.ReadFile("testdata/task_slice_added.xml.golden")
-	assert.NoError(t, err)
+func (s *ApiTestSuite) TestDeserializeXmlSliceAddedEvent() {
+	path := filepath.Join("testdata", "task_slice_added_1"+".xml")
+	xml, err := ioutil.ReadFile(path)
+	assert.NoError(s.T(), err)
 
 	expected := SliceAddedEvent{
 		Args:    []string{"arg1", "arg with space"},
@@ -97,17 +111,32 @@ func TestDeserializeXmlSliceAddedEvent(t *testing.T) {
 		SliceNr: 34,
 	}
 
-	LoadSchema("../schema/clustercode_v1.xsd")
-
 	result := SliceAddedEvent{}
 	xmlError := fromXml(string(xml), &result)
-	//result.XMLName = xml2.Name{}
-	assert.NoError(t, xmlError)
+	assert.NoError(s.T(), xmlError)
 
-	assert.Equal(t, expected, result)
+	assert.Equal(s.T(), expected, result)
 }
 
-func TestDeserializeSliceCompleteEvent(t *testing.T) {
+func (s *ApiTestSuite) TestSerializeXmlSliceAddedEvent() {
+	path := filepath.Join("testdata", "task_slice_added_1"+".xml")
+
+	value := SliceAddedEvent{
+		Args:    []string{"arg1", "arg with space"},
+		JobID:   "620b8251-52a1-4ecd-8adc-4fb280214bba",
+		SliceNr: 34,
+	}
+
+	result, err := ToXml(value)
+	updateGoldenFileIfNecessary(s, result, path)
+
+	expected, err := ioutil.ReadFile(path)
+	assert.NoError(s.T(), err)
+
+	assert.Equal(s.T(), expected, result)
+}
+
+func (s *ApiTestSuite) TestDeserializeSliceCompleteEvent() {
 	json := string(`
         {
             "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba",
@@ -124,10 +153,10 @@ func TestDeserializeSliceCompleteEvent(t *testing.T) {
 	result := SliceCompletedEvent{}
 	fromJson(json, &result)
 
-	assert.Equal(t, expected, result)
+	assert.Equal(s.T(), expected, result)
 }
 
-func TestDeserializeTaskCancelledEvent(t *testing.T) {
+func (s *ApiTestSuite) TestDeserializeTaskCancelledEvent() {
 	json := string(`
         {
             "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba"
@@ -140,5 +169,18 @@ func TestDeserializeTaskCancelledEvent(t *testing.T) {
 	result := TaskCancelledEvent{}
 	fromJson(json, &result)
 
-	assert.Equal(t, expected, result)
+	assert.Equal(s.T(), expected, result)
+}
+
+func TestApiTestSuite(t *testing.T) {
+	suite.Run(t, new(ApiTestSuite))
+}
+
+func updateGoldenFileIfNecessary(s *ApiTestSuite, content string, path string) {
+	if *update {
+		s.T().Log("update golden file")
+		if err := ioutil.WriteFile(path, []byte(content), 0644); err != nil {
+			s.T().Fatalf("failed to update golden file: %s", err)
+		}
+	}
 }

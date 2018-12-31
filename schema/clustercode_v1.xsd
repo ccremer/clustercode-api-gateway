@@ -33,7 +33,7 @@
     </xs:complexType>
   </xs:element>
 
-  <xs:element name="slice_added_event">
+  <xs:element name="SliceAddedEvent">
     <xs:complexType>
       <xs:all>
         <xs:element type="uuid" name="job_id"/>
@@ -61,14 +61,14 @@
           </xs:complexType>
         </xs:element>
       </xs:all>
-      <xs:attribute name="version" type="xs:positiveInteger" use="required"/>
+      <xs:attribute name="version" type="xs:positiveInteger"/>
     </xs:complexType>
   </xs:element>
 
   <xs:element name="tasks">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="slice_added_event" maxOccurs="unbounded"/>
+        <xs:element ref="SliceAddedEvent" maxOccurs="unbounded"/>
       </xs:sequence>
     </xs:complexType>
   </xs:element>
