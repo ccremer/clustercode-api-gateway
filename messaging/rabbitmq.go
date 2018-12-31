@@ -4,6 +4,7 @@ import (
 	"github.com/micro/go-config"
 	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
+	url2 "net/url"
 )
 
 var connection *amqp.Connection
@@ -56,10 +57,23 @@ func Connect() *amqp.Connection {
 	if connection != nil {
 		return connection
 	}
+
+	// we don't want to log the credentials
 	url := config.Get("rabbitmq", "url").String("amqp://guest:guest@rabbitmq:5672/")
-	log.Infof("Connecting to %s", url)
+	urlParsed, err := url2.ParseRequestURI(url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	urlStripped := urlParsed.Scheme+"://"+urlParsed.Host+urlParsed.Path
+
+	log.WithField("url", urlStripped).Info("Connecting to RabbitMQ server")
 	conn, err := amqp.Dial(url)
-	log.Panicf("A working connection to %[2]s is necessary: %[1]s", err, url)
+
+	log.WithFields(log.Fields{
+		"url": urlStripped,
+		"error": err,
+		"help": "Credentials have been removed from URL in the log",
+	}).Fatal("Could not connect to RabbitMQ server")
 	connection = conn
 	return connection
 }
@@ -77,8 +91,8 @@ func OpenSliceAddedQueue(callback func(msg SliceAddedEvent)) {
 	msgs := createConsumer(&options, channel)
 	beginConsuming(msgs, func(d *amqp.Delivery) {
 		event := SliceAddedEvent{}
-		err := fromJson(string(d.Body), &event)
-		failOnDeserialize(err)
+		err := fromXml(string(d.Body), &event)
+		failOnDeserialize(err, d.Body)
 		event.delivery = d
 		callback(event)
 	})
@@ -97,8 +111,8 @@ func OpenTaskAddedQueue(callback func(msg TaskAddedEvent)) {
 	msgs := createConsumer(&options, channel)
 	beginConsuming(msgs, func(d *amqp.Delivery) {
 		event := TaskAddedEvent{}
-		err := fromJson(string(d.Body), &event)
-		failOnDeserialize(err)
+		err := fromXml(string(d.Body), &event)
+		failOnDeserialize(err, d.Body)
 		event.delivery = d
 		callback(event)
 	})
@@ -114,9 +128,8 @@ func OpenSliceCompleteQueue(supplier chan SliceCompletedEvent) {
 	go func(channel *amqp.Channel, options *queueOptions) {
 		for {
 			msg := <-supplier
-			json, _ := ToJson(msg)
-			publish(options, channel, json)
-			log.Debugf("Sent message to queue %s: %s", q.Name, json)
+			ser, _ := ToXml(msg)
+			publish(options, channel, ser)
 		}
 	}(channel, &options)
 }
@@ -130,9 +143,8 @@ func OpenTaskCompleteQueue(supplier chan TaskCompletedEvent) {
 	go func(channel *amqp.Channel, options *queueOptions) {
 		for {
 			msg := <-supplier
-			json, _ := ToJson(msg)
-			publish(options, channel, json)
-			log.Debugf("Sent message to queue %s: %s", q.Name, json)
+			ser, _ := ToXml(msg)
+			publish(options, channel, ser)
 		}
 	}(channel, &options)
 }
@@ -158,8 +170,8 @@ func OpenTaskCancelledQueue(callback func(msg TaskCancelledEvent)) {
 
 	beginConsuming(msgs, func(d *amqp.Delivery) {
 		event := TaskCancelledEvent{}
-		err := fromJson(string(d.Body), &event)
-		failOnDeserialize(err)
+		err := fromXml(string(d.Body), &event)
+		failOnDeserialize(err, d.Body)
 		event.delivery = d
 		callback(event)
 	})
@@ -174,7 +186,7 @@ func OpenFfmpegLinePrintedQueue(supplier chan FfmpegLinePrintedEvent) {
 	go func(channel *amqp.Channel, options *queueOptions) {
 		for {
 			msg := <-supplier
-			json, _ := ToJson(msg)
+			json, _ := ToXml(msg)
 			publish(options, channel, json)
 		}
 	}(channel, &options)

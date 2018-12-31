@@ -5,19 +5,28 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func failOnDeserialize(err error) {
-	log.Panicf("Could not deserialize message: %s. Please purge the invalid messages.", err)
+func failOnDeserialize(err error, payload []byte) {
+	log.WithFields(log.Fields{
+		"payload": string(payload),
+		"error":   err,
+		"help":    "Try purging the invalid messages (they have not been ack'ed) and try again",
+	}).Fatal("Could not deserialize message.")
 }
 
 func createChannel() *amqp.Channel {
 	log.Debugf("Opening a new channel.")
+
 	channel, err := connection.Channel()
-	log.Panicf("Failed to open channel: %[1]s", err)
+
+	log.WithFields(log.Fields{
+		"error": err,
+	}).Fatal("Failed to open channel")
 	return channel
 }
 
 func createQueue(o *queueOptions, channel *amqp.Channel) amqp.Queue {
-	log.Debugf("Creating queue %s", o.queueName)
+	log.WithField("queue_name", o.queueName).Debug("Creating queue")
+
 	q, err := channel.QueueDeclare(
 		o.queueName,
 		o.durable,
@@ -26,12 +35,17 @@ func createQueue(o *queueOptions, channel *amqp.Channel) amqp.Queue {
 		o.noWait,
 		o.args,
 	)
-	log.Panicf("Failed to declare queue %[2]s: %[1]s", err, o.queueName)
+
+	log.WithFields(log.Fields{
+		"queue_name": o.queueName,
+		"error":      err,
+	}).Fatal("Failed to create queue")
 	return q
 }
 
 func createExchange(o *queueOptions, channel *amqp.Channel) {
-	log.Debugf("Creating exchange %s", o.exchangeName)
+	log.WithField("exchange_name", o.exchangeName).Debug("Creating exchange")
+
 	err := channel.ExchangeDeclare(
 		o.exchangeName,
 		o.exchangeType,
@@ -40,18 +54,31 @@ func createExchange(o *queueOptions, channel *amqp.Channel) {
 		o.internal,
 		o.noWait,
 		o.args)
-	log.Panicf("Failed to create exchange %[2]s: %[1]s", err, o.exchangeName)
+
+	log.WithFields(log.Fields{
+		"exchange_name": o.exchangeName,
+		"error":         err,
+	}).Fatal("Failed to create exchange")
 }
 
 func bindToExchange(o *queueOptions, channel *amqp.Channel) {
-	log.Debugf("Binding queue %s to exchange %s", o.queueName, o.exchangeName)
+	log.WithFields(log.Fields{
+		"queue_name":    o.queueName,
+		"exchange_name": o.exchangeName,
+	}).Debug("Binding queue to exchange")
+
 	err := channel.QueueBind(
 		o.queueName,
 		o.routingKey,
 		o.exchangeName,
 		o.noWait,
 		o.args)
-	log.Panicf("Failed to bind queue %[2]s: %[1]s", err, o.queueName)
+
+	log.WithFields(log.Fields{
+		"queue_name":    o.queueName,
+		"exchange_name": o.exchangeName,
+		"error":         err,
+	}).Fatal("Failed to bind queue")
 }
 
 func createConsumer(o *queueOptions, channel *amqp.Channel) <-chan amqp.Delivery {
@@ -64,7 +91,11 @@ func createConsumer(o *queueOptions, channel *amqp.Channel) <-chan amqp.Delivery
 		o.noWait,
 		o.args,
 	)
-	log.Panicf("Failed to consume queue: %[2]s: %[1]s", err, o.queueName)
+
+	log.WithFields(log.Fields{
+		"queue_name": o.queueName,
+		"error":      err,
+	}).Fatal("Failed to consume queue")
 	return msgs
 }
 
@@ -75,20 +106,21 @@ func ensureOnlyOneConsumerActive(channel *amqp.Channel) {
 		prefetchSize,
 		global,
 	)
-	log.Panicf("Failed to set QoS: %s", err)
+	log.WithField("error", err).Fatal("Failed to set QoS")
 }
 
 func beginConsuming(msgs <-chan amqp.Delivery, callback messageReceivedCallback) {
 	go func(msgs <-chan amqp.Delivery) {
 		for msg := range msgs {
-			log.Debugf("Received a message: %s", msg.Body)
+			log.WithField("payload", msg.Body).Debug("Received message")
 			callback(&msg)
 		}
 	}(msgs)
 }
 
 func publish(options *queueOptions, channel *amqp.Channel, payload string) {
-	log.Debugf("Sending message: %s", payload)
+	log.WithField("payload", payload).Debug("Sending message")
+
 	channel.Publish(
 		options.exchangeName,
 		options.queueName,
@@ -96,7 +128,7 @@ func publish(options *queueOptions, channel *amqp.Channel, payload string) {
 		options.immediate,
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
-			ContentType:  "application/json",
+			ContentType:  "application/xml",
 			Body:         []byte(payload),
 		})
 }
@@ -116,6 +148,6 @@ func acknowledgeMessage(completionType CompletionType, delivery *amqp.Delivery) 
 			delivery.Nack(false, true)
 		}
 	default:
-		log.Panicf("Type '%d' is not expected here.", completionType)
+		log.WithField("type", completionType).Panic("Type is not expected here")
 	}
 }
