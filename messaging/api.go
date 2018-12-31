@@ -18,12 +18,12 @@ const (
 type (
 	CompletionType int
 	TaskAddedEvent struct {
-		JobID     string `json:"job_id" xml:"job_id"`
+		JobID     string   `json:"job_id" xml:"job_id"`
 		File      string
 		Priority  int
-		SliceSize int    `json:"slice_size" xml:"slice_size"`
-		FileHash  string `json:"file_hash" xml:"file_hash"`
-		Args      []string
+		SliceSize int      `json:"slice_size" xml:"slice_size"`
+		FileHash  string   `json:"file_hash" xml:"file_hash"`
+		Args      []string `xml:"args>arg"`
 		delivery  *amqp.Delivery
 	}
 	TaskCompletedEvent struct {
@@ -34,9 +34,11 @@ type (
 		delivery *amqp.Delivery
 	}
 	SliceAddedEvent struct {
-		JobID    string `json:"job_id" xml:"job_id"`
-		SliceNr  int    `json:"slice_nr"`
-		Args     []string
+		XmlName  xml2.Name `xml:"slice_added_event" json:"-"`
+		Version  int       `xml:"xmlns1,attr"`
+		JobID    string    `json:"job_id" xml:"job_id"`
+		SliceNr  int       `json:"slice_nr" xml:"slice_nr"`
+		Args     []string  `xml:"args>arg"`
 		delivery *amqp.Delivery
 	}
 	SliceCompletedEvent struct {
@@ -70,6 +72,7 @@ func ToJson(value interface{}) (string, error) {
 
 func fromXml(xml string, value interface{}) error {
 	err := ValidateMessage(&xml)
+	//var err error
 	if err == nil {
 		arr := []byte(xml)
 		err := xml2.Unmarshal(arr, &value)

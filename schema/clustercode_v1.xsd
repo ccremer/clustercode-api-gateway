@@ -1,4 +1,5 @@
 <xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
   <xs:simpleType name="uuid">
     <xs:restriction base="xs:string">
       <xs:length value="36" fixed="true"/>
@@ -7,7 +8,7 @@
   </xs:simpleType>
 
   <xs:simpleType name="stdstream">
-    <xs:restriction base="xs:integer">
+    <xs:restriction base="xs:nonNegativeInteger">
       <xs:enumeration value="0"/>
       <xs:enumeration value="1"/>
       <xs:enumeration value="2"/>
@@ -18,15 +19,17 @@
     <xs:complexType>
       <xs:all>
         <xs:element type="xs:string" name="job_id"/>
-        <xs:element type="xs:integer" name="priority"/>
+        <xs:element type="xs:nonNegativeInteger" name="priority"/>
+        <xs:element type="xs:anyURI" name="file"/>
         <xs:element name="args" minOccurs="0">
           <xs:complexType>
-            <xs:sequence>
+            <xs:sequence maxOccurs="unbounded">
               <xs:element type="xs:string" name="arg"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
       </xs:all>
+      <xs:attribute name="version" type="xs:positiveInteger"/>
     </xs:complexType>
   </xs:element>
 
@@ -34,17 +37,18 @@
     <xs:complexType>
       <xs:all>
         <xs:element type="uuid" name="job_id"/>
-        <xs:element type="xs:integer" name="priority"/>
+        <xs:element type="xs:nonNegativeInteger" name="priority"/>
+        <xs:element type="xs:nonNegativeInteger" name="slice_nr"/>
         <xs:element name="args" minOccurs="0">
           <xs:complexType>
-            <xs:sequence>
+            <xs:sequence maxOccurs="unbounded">
               <xs:element type="xs:string" name="arg"/>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
         <xs:element name="std_streams" minOccurs="0">
           <xs:complexType>
-            <xs:sequence minOccurs="0">
+            <xs:sequence minOccurs="0" maxOccurs="unbounded">
               <xs:element name="stream">
                 <xs:complexType>
                   <xs:all>
@@ -57,6 +61,7 @@
           </xs:complexType>
         </xs:element>
       </xs:all>
+      <xs:attribute name="version" type="xs:positiveInteger" use="required"/>
     </xs:complexType>
   </xs:element>
 
@@ -67,4 +72,5 @@
       </xs:sequence>
     </xs:complexType>
   </xs:element>
+
 </xs:schema>
