@@ -1,0 +1,13 @@
+<slice_added_event>
+    <job_id>620b8251-52a1-4ecd-8adc-4fb280214bba</job_id>
+    <priority>1</priority>
+    <args>
+        <arg>maybe</arg>
+    </args>
+    <std_streams>
+        <stream>
+            <fd>2</fd>
+            <l>aösldkafjsöldkjf</l>
+        </stream>
+    </std_streams>
+</slice_added_event>

@@ -20,6 +20,7 @@ api:
   http:
     addr: ":8080"
   schema:
+    latest: schema/clustercode_v1.xsd
     filepattern: schema/clustercode_v%d.xsd
 
 prometheus:

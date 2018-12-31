@@ -1,6 +1,7 @@
 package main
 
 import (
+	"clustercode-api-gateway/messaging"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/micro/go-config"
@@ -16,13 +17,15 @@ import (
 func main() {
 	LoadConfig()
 	ConfigureLogging()
+	ConfigureMessaging()
 
 	addr := config.Get("http", "addr").String(":8080")
-
 	r := mux.NewRouter()
+
 	if config.Get("prometheus", "enabled").Bool(true) {
 		r.Handle("/metrics", promhttp.Handler())
 	}
+
 	r.HandleFunc("/", handleRoot)
 	r.HandleFunc("/schema/v{version:\\d+}/clustercode.xsd", handleSchema)
 	http.Handle("/", r)
@@ -30,6 +33,10 @@ func main() {
 	log.WithField("port", addr).Info("Starting http server")
 	err := http.ListenAndServe(addr, nil)
 	log.Error(err)
+}
+
+func ConfigureMessaging() {
+	messaging.LoadSchema(config.Get("api", "schema", "latest").String("schema/clustercode_v1.xsd"))
 }
 
 func handleRoot(writer http.ResponseWriter, request *http.Request) {
@@ -46,18 +53,17 @@ func handleSchema(writer http.ResponseWriter, request *http.Request) {
 
 	log.WithFields(log.Fields{
 		"path": path,
-		"uri": request.RequestURI,
+		"uri":  request.RequestURI,
 	}).Debug("Accessing schema")
 	http.ServeFile(writer, request, path)
 }
 
 func LoadConfig() {
-	err := config.Load(
+	if err := config.Load(
 		file.NewSource(file.WithPath("defaults.yaml")),
 		file.NewSource(file.WithPath("config.yaml")),
 		env.NewSource(env.WithStrippedPrefix("CC")),
-	)
-	if err != nil {
+	); err != nil {
 		panic(fmt.Sprintf("Could not load configuration: %s", err))
 	}
 }

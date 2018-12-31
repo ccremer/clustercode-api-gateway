@@ -13,7 +13,9 @@ require (
 	github.com/gorilla/mux v1.6.2
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
+	github.com/jbussdieker/golibxml v0.0.0-20140917070152-a643db2327cb
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/krolaw/xsd v0.0.0-20181003005531-6e00d9d069d0
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/micro/go-config v0.13.1
 	github.com/prometheus/client_golang v0.9.1
