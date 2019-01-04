@@ -1,13 +1,68 @@
 <xs:schema elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
+  <!-- Type definitions -->
+  <xs:complexType name="args">
+    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="Arg" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="std_streams">
+    <!-- This results in following:
+      <StdStreams>
+        <L fd="2">This line is from stderr</Stream>
+        <L fd="1">This line is from stdout</Stream>
+      </StdStreams>
+    -->
+    <xs:sequence minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="L">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:string">
+              <xs:attribute name="fd" type="filedescriptor"/>
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:simpleType name="job_id">
+    <xs:restriction base="uuid">
+      <xs:minLength value="36" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Type restrictions -->
   <xs:simpleType name="uuid">
+    <!-- This results in following:
+      <JobId>620b8251-52a1-4ecd-8adc-4fb280214bba</JobId>
+    -->
     <xs:restriction base="xs:string">
       <xs:length value="36" fixed="true"/>
       <xs:pattern value="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[8-9a-bA-B][0-9a-fA-F]{3}-[0-9a-fA-F]{12}"/>
     </xs:restriction>
   </xs:simpleType>
 
-  <xs:simpleType name="stdstream">
+  <xs:simpleType name="clustercode_uri">
+    <!-- This results in following:
+      'clustercode://base_dir:0/subdir/movie.mp4'
+      For more details, see test cases
+      > ATTENTION: XSD regex is quite limited! No non-capturing groups etc. See https://www.regular-expressions.info/xml.html
+    -->
+    <xs:restriction base="xs:anyURI">
+      <xs:pattern value="clustercode://[a-zA-Z\d\-_.]+(:\d{0,5})?/.+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="md5hash">
+    <xs:restriction base="xs:string">
+      <xs:length value="32" fixed="true"/>
+      <xs:pattern value="[0-9a-fA-F]{32}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="filedescriptor">
     <xs:restriction base="xs:nonNegativeInteger">
       <xs:enumeration value="0"/>
       <xs:enumeration value="1"/>
@@ -15,61 +70,55 @@
     </xs:restriction>
   </xs:simpleType>
 
-  <xs:element name="task_added_event">
+  <!-- Message definitions -->
+  <xs:element name="TaskAddedEvent">
     <xs:complexType>
       <xs:all>
-        <xs:element type="xs:string" name="job_id"/>
-        <xs:element type="xs:nonNegativeInteger" name="priority"/>
-        <xs:element type="xs:anyURI" name="file"/>
-        <xs:element name="args" minOccurs="0">
-          <xs:complexType>
-            <xs:sequence maxOccurs="unbounded">
-              <xs:element type="xs:string" name="arg"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
+        <xs:element name="JobId" type="job_id"/>
+        <xs:element name="File" type="clustercode_uri"/>
+        <xs:element name="Args" type="args" minOccurs="0"/>
+        <xs:element name="FileHash" type="md5hash" minOccurs="0"/>
       </xs:all>
-      <xs:attribute name="version" type="xs:positiveInteger"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="TaskCompletedEvent">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="JobId" type="job_id"/>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- For now, this is basically the same as TaskCompletedEvent -->
+  <xs:element name="TaskCancelledEvent">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="JobId" type="job_id"/>
+      </xs:all>
     </xs:complexType>
   </xs:element>
 
   <xs:element name="SliceAddedEvent">
     <xs:complexType>
       <xs:all>
-        <xs:element type="uuid" name="job_id"/>
-        <xs:element type="xs:nonNegativeInteger" name="priority"/>
-        <xs:element type="xs:nonNegativeInteger" name="slice_nr"/>
-        <xs:element name="args" minOccurs="0">
-          <xs:complexType>
-            <xs:sequence maxOccurs="unbounded">
-              <xs:element type="xs:string" name="arg"/>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
-        <xs:element name="std_streams" minOccurs="0">
-          <xs:complexType>
-            <xs:sequence minOccurs="0" maxOccurs="unbounded">
-              <xs:element name="stream">
-                <xs:complexType>
-                  <xs:all>
-                    <xs:element type="stdstream" name="fd" default="1"/>
-                    <xs:element type="xs:string" name="l"/>
-                  </xs:all>
-                </xs:complexType>
-              </xs:element>
-            </xs:sequence>
-          </xs:complexType>
-        </xs:element>
+        <xs:element name="JobId" type="job_id"/>
+        <xs:element name="SliceNr" type="xs:nonNegativeInteger"/>
+        <xs:element name="Args" type="args" minOccurs="0"/>
       </xs:all>
       <xs:attribute name="version" type="xs:positiveInteger"/>
     </xs:complexType>
   </xs:element>
 
-  <xs:element name="tasks">
+  <xs:element name="SliceCompletedEvent">
     <xs:complexType>
-      <xs:sequence>
-        <xs:element ref="SliceAddedEvent" maxOccurs="unbounded"/>
-      </xs:sequence>
+      <xs:all>
+        <xs:element name="JobId" type="job_id"/>
+        <xs:element name="SliceNr" type="xs:nonNegativeInteger"/>
+        <xs:element name="StdStreams" type="std_streams" minOccurs="0"/>
+        <xs:element name="FileHash" type="md5hash" minOccurs="0"/>
+      </xs:all>
+      <xs:attribute name="version" type="xs:positiveInteger"/>
     </xs:complexType>
   </xs:element>
 
