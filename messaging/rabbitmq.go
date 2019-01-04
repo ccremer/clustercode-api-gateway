@@ -176,7 +176,7 @@ func OpenTaskCancelledQueue(callback func(msg TaskCancelledEvent)) {
 		callback(event)
 	})
 }
-
+/*
 func OpenFfmpegLinePrintedQueue(supplier chan FfmpegLinePrintedEvent) {
 	options := newQueueOptions()
 	options.queueName = config.Get("rabbitmq", "channels", "out").String("line-out")
@@ -191,3 +191,4 @@ func OpenFfmpegLinePrintedQueue(supplier chan FfmpegLinePrintedEvent) {
 		}
 	}(channel, &options)
 }
+*/

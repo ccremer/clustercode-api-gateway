@@ -3,6 +3,8 @@ package messaging
 import (
 	xml2 "encoding/xml"
 	"github.com/streadway/amqp"
+	"net/url"
+	"strconv"
 )
 
 const (
@@ -17,45 +19,40 @@ const (
 type (
 	CompletionType int
 	TaskAddedEvent struct {
-		JobID     string `json:"JobId" xml:"JobId"`
-		File      string
-		Priority  int
+		JobID     string `xml:"JobId"`
+		File      *url.URL
 		SliceSize int
 		FileHash  string
-		Args      []string `xml:"Args>Arg"`
+		Args      []string `xml:"Args>Arg,omitempty"`
 		delivery  *amqp.Delivery
 	}
 	TaskCompletedEvent struct {
-		JobID string `json:"JobId" xml:"JobId"`
+		JobID string `xml:"JobId"`
 	}
 	TaskCancelledEvent struct {
-		JobID    string `json:"JobId" xml:"JobId"`
+		JobID    string `xml:"JobId"`
 		delivery *amqp.Delivery
 	}
 	SliceAddedEvent struct {
-		Version  int    `xml:"version,attr,omitempty"`
-		JobID    string `json:"JobId" xml:"JobId"`
+		JobID    string `xml:"JobId"`
 		SliceNr  int
 		Args     []string `xml:"Args>Arg,omitempty"`
 		delivery *amqp.Delivery
 	}
 	SliceCompletedEvent struct {
-		JobID    string `json:"JobId" xml:"JobId"`
-		FileHash string
-		SliceNr  int
+		JobID      string `xml:"JobId"`
+		FileHash   string `xml:",omitempty"`
+		SliceNr    int
+		StdStreams []StdStream `xml:"StdStreams>L,omitempty"`
 	}
-	FfmpegLinePrintedEvent struct {
-		JobID   string `json:"JobId" xml:"JobId"`
-		SliceNr int
-		FD      int
-		Line    string
-		Index   int64
+	StdStream struct {
+		FD   int    `xml:"fd,attr"`
+		Line string `xml:",innerxml"`
 	}
 )
 
 func fromXml(xml string, value interface{}) error {
-	err := ValidateMessage(&xml)
-	if err == nil {
+	if valid, err := ValidateXml(&xml); valid {
 		arr := []byte(xml)
 		err := xml2.Unmarshal(arr, &value)
 		return err
@@ -65,7 +62,7 @@ func fromXml(xml string, value interface{}) error {
 }
 
 func ToXml(value interface{}) (string, error) {
-	xml, err := xml2.MarshalIndent(&value, "  ", "    ")
+	xml, err := xml2.Marshal(&value)
 	if err == nil {
 		return string(xml[:]), nil
 	} else {
@@ -83,4 +80,13 @@ func (e SliceAddedEvent) SetComplete(completionType CompletionType) {
 
 func (e TaskAddedEvent) SetComplete(completionType CompletionType) {
 	acknowledgeMessage(completionType, e.delivery)
+}
+
+func (e TaskAddedEvent) Priority() int {
+	port, err := strconv.Atoi(e.File.Port())
+	if err == nil {
+		return port
+	} else {
+		return 0
+	}
 }

@@ -1,0 +1,5 @@
+<TaskAddedEvent>
+  <JobId>aaaaaaaa-bbbb-4ccc-addd-eeeeeeeeeeeX</JobId>
+  <File>clustercode://base_dir/movie.mp4</File>
+  <Args/>
+</TaskAddedEvent>

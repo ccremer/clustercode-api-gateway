@@ -1,0 +1,4 @@
+<TaskAddedEvent>
+  <JobId>invalid-content</JobId>
+  <File>clustercode://base_dir/movie.mp4</File>
+</TaskAddedEvent>

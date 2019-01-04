@@ -3,184 +3,135 @@ package messaging
 import (
 	"flag"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 	"io/ioutil"
+	"net/url"
 	"path/filepath"
 	"testing"
 )
 
 var update = flag.Bool("update", false, "update golden files")
 
-type ApiTestSuite struct {
-	suite.Suite
+var serializationTests = []struct {
+	name     string
+	expected interface{}
+	result   interface{}
+	testFile string
+}{
+	{
+		"SliceAddedEvent_WithArgs",
+		&SliceAddedEvent{
+			Args:    []string{"arg1", "arg with space"},
+			JobID:   "620b8251-52a1-4ecd-8adc-4fb280214bba",
+			SliceNr: 34,
+		},
+		&SliceAddedEvent{},
+		"slice_added_event_1.xml",
+	},
+	{
+		"SliceAddedEvent_WithoutArgs",
+		&SliceAddedEvent{
+			JobID:   "620b8251-52a1-4ecd-8adc-4fb280214bba",
+			SliceNr: 34,
+		},
+		&SliceAddedEvent{},
+		"slice_added_event_2.xml",
+	},
+	{
+		"SliceCompletedEvent_WithStreams_OneLine",
+		&SliceCompletedEvent{
+			JobID: "620b8251-52a1-4ecd-8adc-4fb280214bba",
+			StdStreams: []StdStream{
+				{FD: StdOutFileDescriptor, Line: "This is from stdout"},
+			},
+		},
+		&SliceCompletedEvent{},
+		"slice_completed_event_1.xml",
+	},
+	{
+		"SliceCompletedEvent_WithStreams_MultipleLines",
+		&SliceCompletedEvent{
+			JobID: "620b8251-52a1-4ecd-8adc-4fb280214bba",
+			StdStreams: []StdStream{
+				{FD: StdErrFileDescriptor, Line: "This is from stderr"},
+				{FD: StdOutFileDescriptor, Line: "This is from stdout"},
+			},
+		},
+		&SliceCompletedEvent{},
+		"slice_completed_event_2.xml",
+	},
+	{
+		"SliceCompletedEvent_WithoutStreams",
+		&SliceCompletedEvent{
+			JobID: "620b8251-52a1-4ecd-8adc-4fb280214bba",
+		},
+		&SliceCompletedEvent{},
+		"slice_completed_event_3.xml",
+	},
 }
 
-func (s *ApiTestSuite) SetupTest() {
+func TestSerializeXml(t *testing.T) {
+	for _, tt := range serializationTests {
+		t.Run(tt.name, func(t *testing.T) {
+			path := filepath.Join("testdata", "api", tt.testFile)
+
+			// serialize
+			xmlString, err := ToXml(tt.expected)
+			assert.NoError(t, err)
+
+			updateGoldenFileIfNecessary(t, xmlString, path)
+
+			// verify from existing file
+			xmlBytes, err := ioutil.ReadFile(path)
+			assert.NoError(t, err)
+			assert.Equal(t, string(xmlBytes), xmlString+"\n")
+		})
+	}
+}
+
+func TestDeserializeXml(t *testing.T) {
 	LoadSchema("../schema/clustercode_v1.xsd")
-}
+	for _, tt := range serializationTests {
+		t.Run(tt.name, func(t *testing.T) {
 
-func (s *ApiTestSuite) TestDeserializeJsonTaskAddedEvent() {
-	json := string(`
-        {
-            "file": "0/path/to/file.ext",
-            "args": [
-                "arg1",
-                "arg with space"
-            ],
-            "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba",
-            "file_hash": "b8934ef001960cafc224be9f1e1ca82c",
-            "priority": 1,
-            "slice_size": 120
-        }
-        `)
-	expected := TaskAddedEvent{
-		Args:      []string{"arg1", "arg with space"},
-		File:      "0/path/to/file.ext",
-		JobID:     "620b8251-52a1-4ecd-8adc-4fb280214bba",
-		Priority:  1,
-		SliceSize: 120,
-		FileHash:  "b8934ef001960cafc224be9f1e1ca82c",
+			// get XML
+			path := filepath.Join("testdata", "api", tt.testFile)
+			rawXmlBytes, ioErr := ioutil.ReadFile(path)
+			assert.NoError(t, ioErr)
+			xml := string(rawXmlBytes)
+
+			// deserialize
+			xmlErr := fromXml(xml, tt.result)
+			assert.NoError(t, xmlErr)
+
+			// verify
+			assert.Equal(t, tt.expected, tt.result)
+		})
 	}
-
-	result := TaskAddedEvent{}
-	fromJson(json, &result)
-
-	assert.Equal(s.T(), expected, result)
-}
-/*
-func (s *ApiTestSuite) TestDeserializeXmlTaskAddedEvent() {
-	json := string(`
-        {
-            "file": "${base_dir}/0/path/to/file.ext",
-            "args": [
-                "arg1",
-                "arg with space"
-            ],
-            "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba",
-            "file_hash": "b8934ef001960cafc224be9f1e1ca82c",
-            "priority": 1,
-            "slice_size": 120
-        }
-        `)
-	expected := TaskAddedEvent{
-		Args:      []string{"arg1", "arg with space"},
-		File:      "${base_dir}/path/to/file.ext",
-		JobID:     "620b8251-52a1-4ecd-8adc-4fb280214bba",
-		Priority:  1,
-		SliceSize: 120,
-		FileHash:  "b8934ef001960cafc224be9f1e1ca82c",
-	}
-
-	result := TaskAddedEvent{}
-	fromJson(json, &result)
-
-	assert.Equal(s.T(), expected, result)
-}*/
-
-func (s *ApiTestSuite) TestDeserializeJsonSliceAddedEvent() {
-	json := string(`
-        {
-            "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba",
-            "args": [
-                "arg1",
-                "arg with space"
-            ],
-            "slice_nr": 34
-        }
-        `)
-	expected := SliceAddedEvent{
-		Args:    []string{"arg1", "arg with space"},
-		JobID:   "620b8251-52a1-4ecd-8adc-4fb280214bba",
-		SliceNr: 34,
-	}
-
-	result := SliceAddedEvent{}
-	fromJson(json, &result)
-
-	assert.Equal(s.T(), expected, result)
 }
 
-func (s *ApiTestSuite) TestDeserializeXmlSliceAddedEvent() {
-	path := filepath.Join("testdata", "task_slice_added_1"+".xml")
-	xml, err := ioutil.ReadFile(path)
-	assert.NoError(s.T(), err)
+func TestTaskAddedEvent_Priority_ShouldReturnPort(t *testing.T) {
+	cc_url, err := url.Parse("clustercode://base_dir:12/path")
+	assert.NoError(t, err)
+	subject := TaskAddedEvent{File: cc_url,}
 
-	expected := SliceAddedEvent{
-		Args:    []string{"arg1", "arg with space"},
-		JobID:   "620b8251-52a1-4ecd-8adc-4fb280214bba",
-		SliceNr: 34,
-	}
-
-	result := SliceAddedEvent{}
-	xmlError := fromXml(string(xml), &result)
-	assert.NoError(s.T(), xmlError)
-
-	assert.Equal(s.T(), expected, result)
+	result := subject.Priority()
+	assert.Equal(t, 12, result)
 }
 
-func (s *ApiTestSuite) TestSerializeXmlSliceAddedEvent() {
-	path := filepath.Join("testdata", "task_slice_added_1"+".xml")
+func TestTaskAddedEvent_Priority_ShouldReturnZero(t *testing.T) {
+	cc_url, err := url.Parse("clustercode://base_dir/path")
+	assert.NoError(t, err)
+	subject := TaskAddedEvent{File: cc_url,}
 
-	value := SliceAddedEvent{
-		Args:    []string{"arg1", "arg with space"},
-		JobID:   "620b8251-52a1-4ecd-8adc-4fb280214bba",
-		SliceNr: 34,
-	}
-
-	result, err := ToXml(value)
-	updateGoldenFileIfNecessary(s, result, path)
-
-	expected, err := ioutil.ReadFile(path)
-	assert.NoError(s.T(), err)
-
-	assert.Equal(s.T(), expected, result)
+	result := subject.Priority()
+	assert.Equal(t, 0, result)
 }
 
-func (s *ApiTestSuite) TestDeserializeSliceCompleteEvent() {
-	json := string(`
-        {
-            "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba",
-            "slice_nr": 34,
-            "file_hash": "b8934ef001960cafc224be9f1e1ca82c"
-        }
-        `)
-	expected := SliceCompletedEvent{
-		JobID:    "620b8251-52a1-4ecd-8adc-4fb280214bba",
-		SliceNr:  34,
-		FileHash: "b8934ef001960cafc224be9f1e1ca82c",
-	}
-
-	result := SliceCompletedEvent{}
-	fromJson(json, &result)
-
-	assert.Equal(s.T(), expected, result)
-}
-
-func (s *ApiTestSuite) TestDeserializeTaskCancelledEvent() {
-	json := string(`
-        {
-            "job_id": "620b8251-52a1-4ecd-8adc-4fb280214bba"
-        }
-        `)
-	expected := TaskCancelledEvent{
-		JobID: "620b8251-52a1-4ecd-8adc-4fb280214bba",
-	}
-
-	result := TaskCancelledEvent{}
-	fromJson(json, &result)
-
-	assert.Equal(s.T(), expected, result)
-}
-
-func TestApiTestSuite(t *testing.T) {
-	suite.Run(t, new(ApiTestSuite))
-}
-
-func updateGoldenFileIfNecessary(s *ApiTestSuite, content string, path string) {
+func updateGoldenFileIfNecessary(t *testing.T, content string, path string) {
 	if *update {
-		s.T().Log("update golden file")
-		if err := ioutil.WriteFile(path, []byte(content), 0644); err != nil {
-			s.T().Fatalf("failed to update golden file: %s", err)
+		t.Log("update golden file")
+		if err := ioutil.WriteFile(path, []byte(content+"\n"), 0644); err != nil {
+			t.Fatalf("failed to update golden file: %s", err)
 		}
 	}
 }

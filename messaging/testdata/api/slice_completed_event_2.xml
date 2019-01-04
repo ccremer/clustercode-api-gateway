@@ -1,0 +1,1 @@
+<SliceCompletedEvent><JobId>620b8251-52a1-4ecd-8adc-4fb280214bba</JobId><SliceNr>0</SliceNr><StdStreams><L fd="2">This is from stderr</L><L fd="1">This is from stdout</L></StdStreams></SliceCompletedEvent>

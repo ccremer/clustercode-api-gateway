@@ -25,21 +25,21 @@ func LoadSchema(path string) {
 	schema = xsdSchema
 }
 
-func ValidateMessage(xml *string) error {
+func ValidateXml(xml *string) (bool, error) {
 	if schema == nil {
 		log.Fatal("schema is not loaded")
 	}
 	doc := golibxml.ParseDoc(*xml)
 	if doc == nil {
-		return errors.New("provided XML string does not seem to be valid XML")
+		return false, errors.New("provided XML string does not seem to be valid XML")
 	}
 	defer doc.Free()
 
 	// golibxml._Ctype_xmlDocPtr can't be cast to xsd.DocPtr, even though they are both
 	// essentially _Ctype_xmlDocPtr.  Using unsafe gets around this.
 	if err := schema.Validate(xsd.DocPtr(unsafe.Pointer(doc.Ptr))); err != nil {
-		return errors.New(fmt.Sprintln(err))
+		return false, errors.New(fmt.Sprintln(err))
 	} else {
-		return nil
+		return true, nil
 	}
 }
