@@ -1,0 +1,16 @@
+image: docker:stable
+
+variables:
+  GOOS: linux
+  DOCKERHUB_REPOSITORY: braindoctor/clustercode-api-gateway
+
+stages:
+  - test
+
+test:
+  stage: test
+  image: golang:1.11-alpine
+  before_script:
+    - apk add --no-cache git build-base libxml2-dev
+  script:
+    - GO111MODULE=on go test ./... -short
