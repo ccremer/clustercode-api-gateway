@@ -19,7 +19,7 @@
         <xs:complexType>
           <xs:simpleContent>
             <xs:extension base="xs:string">
-              <xs:attribute name="fd" type="filedescriptor"/>
+              <xs:attribute name="fd" type="filedescriptor" use="required"/>
             </xs:extension>
           </xs:simpleContent>
         </xs:complexType>

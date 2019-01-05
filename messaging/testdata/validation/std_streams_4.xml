@@ -1,0 +1,8 @@
+<SliceCompletedEvent>
+  <JobId>620b8251-52a1-4ecd-8adc-4fb280214bba</JobId>
+  <SliceNr>0</SliceNr>
+  <StdStreams>
+    <L fd="1">Some line 1</L>
+    <L fd="2">Some line 2</L>
+  </StdStreams>
+</SliceCompletedEvent>

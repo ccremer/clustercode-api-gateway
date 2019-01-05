@@ -52,6 +52,26 @@ var validationTests = []struct {
 		"job_id_3.xml",
 		false,
 	},
+	{
+		"Stream_Valid_EmptyLine",
+		"std_streams_1.xml",
+		true,
+	},
+	{
+		"Stream_Invalid_InvalidFd",
+		"std_streams_2.xml",
+		false,
+	},
+	{
+		"Stream_Invalid_NeedsFdAttribute",
+		"std_streams_3.xml",
+		false,
+	},
+	{
+		"Stream_Valid_MultipleLines",
+		"std_streams_4.xml",
+		true,
+	},
 }
 
 func TestValidation(t *testing.T) {
