@@ -100,7 +100,7 @@ func TestDeserializeXml(t *testing.T) {
 			xml := string(rawXmlBytes)
 
 			// deserialize
-			xmlErr := fromXml(xml, tt.result)
+			xmlErr := FromXml(xml, tt.result)
 			assert.NoError(t, xmlErr)
 
 			// verify

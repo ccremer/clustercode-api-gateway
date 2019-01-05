@@ -51,7 +51,7 @@ type (
 	}
 )
 
-func fromXml(xml string, value interface{}) error {
+func FromXml(xml string, value interface{}) error {
 	if valid, err := ValidateXml(&xml); valid {
 		arr := []byte(xml)
 		err := xml2.Unmarshal(arr, &value)

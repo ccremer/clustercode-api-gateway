@@ -91,7 +91,7 @@ func OpenSliceAddedQueue(callback func(msg SliceAddedEvent)) {
 	msgs := createConsumer(&options, channel)
 	beginConsuming(msgs, func(d *amqp.Delivery) {
 		event := SliceAddedEvent{}
-		err := fromXml(string(d.Body), &event)
+		err := FromXml(string(d.Body), &event)
 		failOnDeserialize(err, d.Body)
 		event.delivery = d
 		callback(event)
@@ -111,7 +111,7 @@ func OpenTaskAddedQueue(callback func(msg TaskAddedEvent)) {
 	msgs := createConsumer(&options, channel)
 	beginConsuming(msgs, func(d *amqp.Delivery) {
 		event := TaskAddedEvent{}
-		err := fromXml(string(d.Body), &event)
+		err := FromXml(string(d.Body), &event)
 		failOnDeserialize(err, d.Body)
 		event.delivery = d
 		callback(event)
@@ -170,7 +170,7 @@ func OpenTaskCancelledQueue(callback func(msg TaskCancelledEvent)) {
 
 	beginConsuming(msgs, func(d *amqp.Delivery) {
 		event := TaskCancelledEvent{}
-		err := fromXml(string(d.Body), &event)
+		err := FromXml(string(d.Body), &event)
 		failOnDeserialize(err, d.Body)
 		event.delivery = d
 		callback(event)
