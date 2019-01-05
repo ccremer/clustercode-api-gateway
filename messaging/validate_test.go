@@ -72,6 +72,16 @@ var validationTests = []struct {
 		"std_streams_4.xml",
 		true,
 	},
+	{
+		"SliceNr_Valid_NegativeValue",
+		"slice_nr_1.xml",
+		false,
+	},
+	{
+		"SliceNr_Valid_DecimalValue",
+		"slice_nr_2.xml",
+		false,
+	},
 }
 
 func TestValidation(t *testing.T) {
