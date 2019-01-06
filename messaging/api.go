@@ -1,6 +1,7 @@
 package messaging
 
 import (
+	json2 "encoding/json"
 	xml2 "encoding/xml"
 	"github.com/streadway/amqp"
 	"net/url"
@@ -50,6 +51,20 @@ type (
 		Line string `xml:",innerxml"`
 	}
 )
+
+func FromJson(json string, value interface{}) error {
+	arr := []byte(json)
+	return json2.Unmarshal(arr, &value)
+}
+
+func ToJson(value interface{}) (string, error) {
+	json, err := json2.Marshal(&value)
+	if err == nil {
+		return string(json[:]), nil
+	} else {
+		return "", err
+	}
+}
 
 func FromXml(xml string, value interface{}) error {
 	if valid, err := ValidateXml(&xml); valid {

@@ -1,31 +1,35 @@
 package messaging
 
 import (
+	"errors"
+	"github.com/google/uuid"
 	"github.com/micro/go-config"
 	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
-	url2 "net/url"
+	"time"
 )
-
-var connection *amqp.Connection
 
 type (
 	queueOptions struct {
-		exclusive    bool
-		durable      bool
-		autoDelete   bool
-		noWait       bool
-		internal     bool
-		mandatory    bool
-		immediate    bool
-		routingKey   string
-		exchangeName string
-		exchangeType string
-		queueName    string
-		args         amqp.Table
-		consumerName string
-		autoAck      bool
-		noLocal      bool
+		exclusive     bool
+		durable       bool
+		autoDelete    bool
+		noWait        bool
+		internal      bool
+		mandatory     bool
+		immediate     bool
+		routingKey    string
+		exchangeName  string
+		exchangeType  string
+		queueName     string
+		args          amqp.Table
+		consumerName  string
+		autoAck       bool
+		noLocal       bool
+		correlationId string
+		contentType   string
+		deliveryMode  uint8
+		replyTo       string
 	}
 	Message interface {
 		SetComplete(completionType CompletionType)
@@ -35,60 +39,48 @@ type (
 
 func newQueueOptions() queueOptions {
 	return queueOptions{
-		exclusive:    false,
-		durable:      true,
-		autoDelete:   false,
-		noWait:       false,
-		autoAck:      false,
-		mandatory:    false,
-		immediate:    false,
-		queueName:    "",
-		args:         nil,
-		routingKey:   "",
-		exchangeName: "",
-		exchangeType: "fanout",
-		internal:     false,
-		noLocal:      false,
-		consumerName: "",
+		exclusive:     false,
+		durable:       true,
+		autoDelete:    false,
+		noWait:        false,
+		autoAck:       false,
+		mandatory:     false,
+		immediate:     false,
+		queueName:     "",
+		args:          nil,
+		routingKey:    "",
+		exchangeName:  "",
+		exchangeType:  "fanout",
+		internal:      false,
+		noLocal:       false,
+		consumerName:  "",
+		correlationId: "",
+		contentType:   "application/xml",
+		deliveryMode:  amqp.Persistent,
+		replyTo:       "",
 	}
 }
 
-func Connect() *amqp.Connection {
-	if connection != nil {
-		return connection
-	}
-
-	// we don't want to log the credentials
-	url := config.Get("rabbitmq", "url").String("amqp://guest:guest@rabbitmq:5672/")
-	urlParsed, err := url2.ParseRequestURI(url)
-	if err != nil {
-		log.Fatal(err)
-	}
-	urlStripped := urlParsed.Scheme+"://"+urlParsed.Host+urlParsed.Path
-
 	log.WithField("url", urlStripped).Info("Connecting to RabbitMQ server")
 	conn, err := amqp.Dial(url)
+)
 
-	log.WithFields(log.Fields{
-		"url": urlStripped,
+func Initialize() {
+	log.Info("Called initilaize")
 		"error": err,
-		"help": "Credentials have been removed from URL in the log",
-	}).Fatal("Could not connect to RabbitMQ server")
-	connection = conn
-	return connection
 }
 
 func OpenSliceAddedQueue(callback func(msg SliceAddedEvent)) {
 	options := newQueueOptions()
 	options.queueName = config.Get("rabbitmq", "channels", "slice", "added").String("slice-added")
-	channel := createChannel()
-	q := createQueue(&options, channel)
+	channel := createChannelOrFail()
+	q := createQueueOrFail(&options, channel)
 
 	ensureOnlyOneConsumerActive(channel)
 
 	options.consumerName = q.Name
 	options.autoAck = false
-	msgs := createConsumer(&options, channel)
+	msgs := createConsumerOrFail(&options, channel)
 	beginConsuming(msgs, func(d *amqp.Delivery) {
 		event := SliceAddedEvent{}
 		err := FromXml(string(d.Body), &event)

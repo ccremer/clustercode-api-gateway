@@ -1,0 +1,20 @@
+version: "3.0"
+services:
+  rabbitmq:
+    container_name: rabbitmq
+    image: "rabbitmq:3-alpine"
+    ports:
+      - "5672:5672"
+
+  prometheus:
+    container_name: prometheus
+    image: "prom/prometheus:latest"
+    ports:
+      - "9090:9090"
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+
+networks:
+  default:
+    external:
+      name: clustercode
