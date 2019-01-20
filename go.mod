@@ -1,4 +1,4 @@
-module clustercode-api-gateway
+module github.com/ccremer/clustercode-api-gateway
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect

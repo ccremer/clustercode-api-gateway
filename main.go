@@ -1,8 +1,8 @@
 package main
 
 import (
-	"clustercode-api-gateway/schema"
 	"fmt"
+	"github.com/ccremer/clustercode-api-gateway/schema"
 	"github.com/gorilla/mux"
 	"github.com/micro/go-config"
 	"github.com/micro/go-config/source/env"

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"clustercode-api-gateway/messaging"
-	"clustercode-api-gateway/schema"
 	json2 "encoding/json"
 	xml2 "encoding/xml"
+	"github.com/ccremer/clustercode-api-gateway/messaging"
+	"github.com/ccremer/clustercode-api-gateway/schema"
 	"github.com/micro/go-config"
 	log "github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
