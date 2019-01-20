@@ -1,4 +1,4 @@
-package messaging
+package schema
 
 import (
 	"github.com/stretchr/testify/assert"
@@ -85,17 +85,18 @@ var validationTests = []struct {
 }
 
 func TestValidation(t *testing.T) {
-	LoadSchema("../schema/clustercode_v1.xsd")
+	v := &Validator{}
+	v.LoadXmlSchema("clustercode_v1.xsd")
 	for _, tt := range validationTests {
 		t.Run(tt.name, func(t *testing.T) {
 
 			// get XML
-			path := filepath.Join("testdata", "validation", tt.testFile)
+			path := filepath.Join("testdata", "xml", tt.testFile)
 			rawXmlBytes, ioErr := ioutil.ReadFile(path)
 			assert.NoError(t, ioErr)
 			xml := string(rawXmlBytes)
 
-			valid, err := ValidateXml(&xml)
+			valid, err := v.ValidateXml(&xml)
 			if tt.isValid {
 				assert.NoError(t, err)
 				assert.True(t, valid)

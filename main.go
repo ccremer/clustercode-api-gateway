@@ -1,7 +1,7 @@
 package main
 
 import (
-	"clustercode-api-gateway/messaging"
+	"clustercode-api-gateway/schema"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/micro/go-config"
@@ -37,7 +37,9 @@ func main() {
 }
 
 func ConfigureMessaging() {
-	messaging.LoadSchema(config.Get("api", "schema", "latest").String("schema/clustercode_v1.xsd"))
+	validator = schema.NewXmlValidator(config.
+		Get("api", "schema", "latest").
+		String("schema/clustercode_v1.xsd"))
 }
 
 func handleRoot(writer http.ResponseWriter, request *http.Request) {
