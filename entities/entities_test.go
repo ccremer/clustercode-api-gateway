@@ -2,6 +2,7 @@ package entities
 
 import (
 	"flag"
+	"github.com/ccremer/clustercode-api-gateway/schema"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/url"
@@ -89,7 +90,7 @@ func TestSerializeXml(t *testing.T) {
 }
 
 func TestDeserializeXml(t *testing.T) {
-	ConfigureMessaging()
+	Validator = schema.NewXmlValidator("../schema/clustercode_v1.xsd")
 	for _, tt := range serializationTests {
 		t.Run(tt.name, func(t *testing.T) {
 
