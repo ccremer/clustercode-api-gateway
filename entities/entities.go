@@ -60,6 +60,36 @@ type (
 	}
 )
 
+func DeserializeSliceAddedEvent(d *amqp.Delivery) (*SliceAddedEvent, error) {
+	event := &SliceAddedEvent{
+		delivery: d,
+	}
+	if err := FromXml(string(d.Body), &event); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func DeserializeTaskCancelledEvent(d *amqp.Delivery) (*TaskCancelledEvent, error) {
+	event := &TaskCancelledEvent{
+		delivery: d,
+	}
+	if err := FromXml(string(d.Body), &event); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
+func DeserializeTaskAddedEvent(d *amqp.Delivery) (*TaskAddedEvent, error) {
+	event := &TaskAddedEvent{
+		delivery: d,
+	}
+	if err := FromXml(string(d.Body), &event); err != nil {
+		return nil, err
+	}
+	return event, nil
+}
+
 var Validator *schema.Validator
 
 func FromJson(json string, value interface{}) error {
@@ -75,7 +105,6 @@ func ToJson(value interface{}) (string, error) {
 		return "", err
 	}
 }
-
 
 func FromXml(xml string, value interface{}) error {
 	if valid, err := Validator.ValidateXml(&xml); valid {
