@@ -5,127 +5,145 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func failOnDeserialize(err error, payload []byte) {
-	log.WithFields(log.Fields{
-		"payload": string(payload),
-		"error":   err,
-		"help":    "Try purging the invalid messages (they have not been ack'ed) and try again",
-	}).Fatal("Could not deserialize message.")
+func (s *RabbitMqService) createChannelOrFail() *amqp.Channel {
+	if channel, err := s.tryCreateChannel(); err == nil {
+		return channel
+	} else {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Fatal("failed to open channel")
+		return channel
+	}
 }
 
-func createChannel() *amqp.Channel {
-	log.Debugf("Opening a new channel.")
-
-	channel, err := connection.Channel()
-
-	log.WithFields(log.Fields{
-		"error": err,
-	}).Fatal("Failed to open channel")
-	return channel
+func (s *RabbitMqService) tryCreateChannel() (*amqp.Channel, error) {
+	log.Debugf("opening a new channel")
+	return s.getConnection().Channel()
 }
 
-func createQueue(o *queueOptions, channel *amqp.Channel) amqp.Queue {
-	log.WithField("queue_name", o.queueName).Debug("Creating queue")
+func createQueueOrFail(o *QueueOptions, channel *amqp.Channel) amqp.Queue {
+	if q, err := tryCreateQueue(o, channel); err == nil {
+		return q
+	} else {
+		log.WithFields(log.Fields{
+			"queue_name": o.QueueName,
+			"error":      err,
+		}).Fatal("failed to create queue")
+		return q
+	}
+}
 
-	q, err := channel.QueueDeclare(
-		o.queueName,
-		o.durable,
-		o.autoDelete,
-		o.exclusive,
-		o.noWait,
-		o.args,
+func tryCreateQueue(o *QueueOptions, channel *amqp.Channel) (amqp.Queue, error) {
+	log.WithField("queue_name", o.QueueName).Debug("creating queue")
+	return channel.QueueDeclare(
+		o.QueueName,
+		o.Durable,
+		o.AutoDelete,
+		o.Exclusive,
+		o.NoWait,
+		o.Args,
 	)
-
-	log.WithFields(log.Fields{
-		"queue_name": o.queueName,
-		"error":      err,
-	}).Fatal("Failed to create queue")
-	return q
 }
 
-func createExchange(o *queueOptions, channel *amqp.Channel) {
-	log.WithField("exchange_name", o.exchangeName).Debug("Creating exchange")
-
-	err := channel.ExchangeDeclare(
-		o.exchangeName,
-		o.exchangeType,
-		o.durable,
-		o.autoDelete,
-		o.internal,
-		o.noWait,
-		o.args)
-
-	log.WithFields(log.Fields{
-		"exchange_name": o.exchangeName,
-		"error":         err,
-	}).Fatal("Failed to create exchange")
+func createExchangeOrFail(o *ExchangeOptions, channel *amqp.Channel) {
+	if err := tryCreateExchange(o, channel); err != nil {
+		log.WithFields(log.Fields{
+			"exchange_name": o.ExchangeName,
+			"error":         err,
+		}).Fatal("failed to create exchange")
+	}
 }
 
-func bindToExchange(o *queueOptions, channel *amqp.Channel) {
+func tryCreateExchange(o *ExchangeOptions, channel *amqp.Channel) error {
+	log.WithField("exchange_name", o.ExchangeName).Debug("creating exchange")
+	return channel.ExchangeDeclare(
+		o.ExchangeName,
+		o.ExchangeType,
+		o.Durable,
+		o.AutoDelete,
+		o.Internal,
+		o.NoWait,
+		o.Args)
+}
+
+func bindToExchange(o *ExchangeOptions, channel *amqp.Channel) {
 	log.WithFields(log.Fields{
-		"queue_name":    o.queueName,
-		"exchange_name": o.exchangeName,
-	}).Debug("Binding queue to exchange")
+		"queue_name":    o.QueueName,
+		"exchange_name": o.ExchangeName,
+	}).Debug("binding queue to exchange")
 
 	err := channel.QueueBind(
-		o.queueName,
-		o.routingKey,
-		o.exchangeName,
-		o.noWait,
-		o.args)
+		o.QueueName,
+		o.RoutingKey,
+		o.ExchangeName,
+		o.NoWait,
+		o.Args)
 
-	log.WithFields(log.Fields{
-		"queue_name":    o.queueName,
-		"exchange_name": o.exchangeName,
-		"error":         err,
-	}).Fatal("Failed to bind queue")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"queue_name":    o.QueueName,
+			"exchange_name": o.ExchangeName,
+			"error":         err,
+		}).Fatal("failed to bind queue")
+	}
 }
 
-func createConsumer(o *queueOptions, channel *amqp.Channel) <-chan amqp.Delivery {
-	msgs, err := channel.Consume(
-		o.queueName,
-		o.consumerName,
-		o.autoAck,
-		o.exclusive,
-		o.noLocal,
-		o.noWait,
-		o.args,
+func createConsumerOrFail(o *QueueOptions, channel *amqp.Channel) <-chan amqp.Delivery {
+	if msgs, err := tryCreateConsumer(o, channel); err == nil {
+		return msgs
+	} else {
+		log.WithFields(log.Fields{
+			"queue_name": o.QueueName,
+			"error":      err,
+		}).Fatal("failed to consume queue")
+		return msgs
+	}
+}
+
+func tryCreateConsumer(o *QueueOptions, channel *amqp.Channel) (<-chan amqp.Delivery, error) {
+	return channel.Consume(
+		o.QueueName,
+		o.ConsumerName,
+		o.AutoAck,
+		o.Exclusive,
+		o.NoLocal,
+		o.NoWait,
+		o.Args,
 	)
-
-	log.WithFields(log.Fields{
-		"queue_name": o.queueName,
-		"error":      err,
-	}).Fatal("Failed to consume queue")
-	return msgs
 }
 
-func ensureOnlyOneConsumerActive(channel *amqp.Channel) {
-	prefetchCount, prefetchSize, global := 1, 0, false
+func setQos(o *QosOptions, channel *amqp.Channel) {
+	global := false
 	err := channel.Qos(
-		prefetchCount,
-		prefetchSize,
+		o.PrefetchCount,
+		o.PrefetchSize,
 		global,
 	)
-	log.WithField("error", err).Fatal("Failed to set QoS")
+	if err != nil {
+		log.WithField("error", err).Fatal("failed to set QoS")
+	}
 }
 
 func beginConsuming(msgs <-chan amqp.Delivery, callback messageReceivedCallback) {
 	go func(msgs <-chan amqp.Delivery) {
 		for msg := range msgs {
-			log.WithField("payload", msg.Body).Debug("Received message")
+			log.WithFields(log.Fields{
+				"routing_key": msg.RoutingKey,
+				"correlation_id": msg.CorrelationId,
+				"reply_to": msg.ReplyTo,
+				"consumer_tag": msg.ConsumerTag,
+			}).Debug("received message")
 			callback(&msg)
 		}
 	}(msgs)
 }
 
-func publish(options *queueOptions, channel *amqp.Channel, payload string) {
-	log.WithField("payload", payload).Debug("Sending message")
-
-	channel.Publish(
-		options.exchangeName,
-		options.queueName,
-		options.mandatory,
-		options.immediate,
+func publishOnChannel(options *ExchangeOptions, channel *amqp.Channel, payload string) error {
+	return channel.Publish(
+		options.ExchangeName,
+		options.RoutingKey,
+		options.Mandatory,
+		options.Immediate,
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "application/xml",
@@ -133,21 +151,35 @@ func publish(options *queueOptions, channel *amqp.Channel, payload string) {
 		})
 }
 
-func acknowledgeMessage(completionType CompletionType, delivery *amqp.Delivery) {
-	switch completionType {
-	case Complete:
-		{
-			delivery.Ack(false)
-		}
-	case Incomplete:
-		{
-			delivery.Nack(false, false)
-		}
-	case IncompleteAndRequeue:
-		{
-			delivery.Nack(false, true)
-		}
-	default:
-		log.WithField("type", completionType).Panic("Type is not expected here")
+var defaultChannelInitializer = func(config *ChannelConfig, ch *amqp.Channel) {
+	log.Debug("initializing channel")
+
+	qOptions := *config.QueueOptions
+	exOptions := *config.ExchangeOptions
+	consumer := config.Consumer
+
+	q := createQueueOrFail(&qOptions, ch)
+
+	if qos := config.QosOptions; qos != nil {
+		setQos(qos, ch)
 	}
+
+	if config.QueueOptions != nil {
+		createExchangeOrFail(&exOptions, ch)
+		bindToExchange(&exOptions, ch)
+	}
+
+	qOptions.QueueName = q.Name
+
+	if consumer != nil {
+
+		qOptions.ConsumerName = q.Name
+
+		msgs := createConsumerOrFail(&qOptions, ch)
+
+		beginConsuming(msgs, func(d *amqp.Delivery) {
+			config.Consumer(d)
+		})
+	}
+
 }

@@ -9,12 +9,33 @@ rabbitmq:
   url: amqp://guest:guest@rabbitmq:5672/
   channels:
     task:
-      added: task-added
-      completed: task-completed
-      cancelled: task-cancelled
+      added:
+        queue:
+          queueName: task-added
+          durable: true
+        qos:
+          prefetchCount: 1
+      completed:
+        queue:
+          queueName: task-completed
+          durable: true
+      cancelled:
+        queue:
+          exclusive: true
+        exchange:
+          exchangeName: task-cancelled
+          durable: true
     slice:
-      added: slice-added
-      completed: slice-completed
+      added:
+        queue:
+          queueName: slice-added
+          durable: true
+        qos:
+          prefetchCount: 1
+      completed:
+        queue:
+          queueName: slice-completed
+          durable: true
 
 api:
   http:

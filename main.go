@@ -18,7 +18,8 @@ func main() {
 	LoadConfig()
 	ConfigureLogging()
 	ConfigureMessaging()
-	messaging.Connect()
+	Initialize()
+	//healthCheckQueue = messaging.OpenHealthCheckServer()
 
 	addr := config.Get("http", "addr").String(":8080")
 	r := mux.NewRouter()
