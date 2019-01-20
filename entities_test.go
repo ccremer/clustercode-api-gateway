@@ -1,4 +1,4 @@
-package messaging
+package main
 
 import (
 	"flag"
@@ -72,7 +72,7 @@ var serializationTests = []struct {
 func TestSerializeXml(t *testing.T) {
 	for _, tt := range serializationTests {
 		t.Run(tt.name, func(t *testing.T) {
-			path := filepath.Join("testdata", "api", tt.testFile)
+			path := filepath.Join("testdata", tt.testFile)
 
 			// serialize
 			xmlString, err := ToXml(tt.expected)
@@ -89,12 +89,12 @@ func TestSerializeXml(t *testing.T) {
 }
 
 func TestDeserializeXml(t *testing.T) {
-	LoadSchema("../schema/clustercode_v1.xsd")
+	ConfigureMessaging()
 	for _, tt := range serializationTests {
 		t.Run(tt.name, func(t *testing.T) {
 
 			// get XML
-			path := filepath.Join("testdata", "api", tt.testFile)
+			path := filepath.Join("testdata", tt.testFile)
 			rawXmlBytes, ioErr := ioutil.ReadFile(path)
 			assert.NoError(t, ioErr)
 			xml := string(rawXmlBytes)
