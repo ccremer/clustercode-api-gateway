@@ -1,4 +1,4 @@
-package main
+package entities
 
 import (
 	json2 "encoding/json"
@@ -60,6 +60,8 @@ type (
 	}
 )
 
+var Validator *schema.Validator
+
 func FromJson(json string, value interface{}) error {
 	arr := []byte(json)
 	return json2.Unmarshal(arr, &value)
@@ -74,10 +76,9 @@ func ToJson(value interface{}) (string, error) {
 	}
 }
 
-var validator *schema.Validator
 
 func FromXml(xml string, value interface{}) error {
-	if valid, err := validator.ValidateXml(&xml); valid {
+	if valid, err := Validator.ValidateXml(&xml); valid {
 		arr := []byte(xml)
 		err := xml2.Unmarshal(arr, &value)
 		return err
@@ -158,7 +159,7 @@ func Initialize() {
 		QueueOptions:    qConfig,
 		Consumer: func(d *amqp.Delivery) {
 			xml := string(d.Body)
-			if _, err := validator.ValidateXml(&xml); err != nil {
+			if _, err := Validator.ValidateXml(&xml); err != nil {
 				log.WithField("payload", xml).Warn("message is not valid XML")
 				return
 			}

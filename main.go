@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ccremer/clustercode-api-gateway/entities"
 	"github.com/ccremer/clustercode-api-gateway/schema"
 	"github.com/gorilla/mux"
 	"github.com/micro/go-config"
@@ -18,7 +19,8 @@ func main() {
 	LoadConfig()
 	ConfigureLogging()
 	ConfigureMessaging()
-	Initialize()
+
+	entities.Initialize()
 	//healthCheckQueue = messaging.OpenHealthCheckServer()
 
 	addr := config.Get("http", "addr").String(":8080")
@@ -38,7 +40,7 @@ func main() {
 }
 
 func ConfigureMessaging() {
-	validator = schema.NewXmlValidator(config.
+	entities.Validator = schema.NewXmlValidator(config.
 		Get("api", "schema", "latest").
 		String("schema/clustercode_v1.xsd"))
 }
