@@ -64,7 +64,7 @@ func DeserializeSliceAddedEvent(d *amqp.Delivery) (*SliceAddedEvent, error) {
 	event := &SliceAddedEvent{
 		delivery: d,
 	}
-	if err := FromXml(string(d.Body), &event); err != nil {
+	if err := FromXml(string(d.Body), event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -74,7 +74,7 @@ func DeserializeTaskCancelledEvent(d *amqp.Delivery) (*TaskCancelledEvent, error
 	event := &TaskCancelledEvent{
 		delivery: d,
 	}
-	if err := FromXml(string(d.Body), &event); err != nil {
+	if err := FromXml(string(d.Body), event); err != nil {
 		return nil, err
 	}
 	return event, nil
@@ -84,7 +84,7 @@ func DeserializeTaskAddedEvent(d *amqp.Delivery) (*TaskAddedEvent, error) {
 	event := &TaskAddedEvent{
 		delivery: d,
 	}
-	if err := FromXml(string(d.Body), &event); err != nil {
+	if err := FromXml(string(d.Body), event); err != nil {
 		return nil, err
 	}
 	return event, nil

@@ -155,7 +155,6 @@ var defaultChannelInitializer = func(config *ChannelConfig, ch *amqp.Channel) {
 	log.Debug("initializing channel")
 
 	qOptions := *config.QueueOptions
-	exOptions := *config.ExchangeOptions
 	consumer := config.Consumer
 
 	q := createQueueOrFail(&qOptions, ch)
@@ -164,7 +163,8 @@ var defaultChannelInitializer = func(config *ChannelConfig, ch *amqp.Channel) {
 		setQos(qos, ch)
 	}
 
-	if config.QueueOptions != nil {
+	if config.ExchangeOptions != nil {
+		exOptions := *config.ExchangeOptions
 		createExchangeOrFail(&exOptions, ch)
 		bindToExchange(&exOptions, ch)
 	}
